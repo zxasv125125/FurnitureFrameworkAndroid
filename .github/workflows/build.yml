@@ -1,0 +1,35 @@
+name: Build and Push DLL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install Workloads
+        run: dotnet workload install android wasm-tools
+
+      - name: Restore
+        run: dotnet restore FurnitureFramework/FurnitureFramework.csproj -p:GamePath="${{ github.workspace }}/FurnitureFramework/libs"
+
+      - name: Build Project
+        run: dotnet build FurnitureFramework/FurnitureFramework.csproj --configuration Release --no-restore -p:GamePath="${{ github.workspace }}/FurnitureFramework/libs" -p:IgnoreModBuildConfigGameCheck=true
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: FurnitureFramework
+          path: FurnitureFramework/bin/Release/**/*.dll
+
