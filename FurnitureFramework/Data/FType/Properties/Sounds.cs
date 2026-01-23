@@ -12,20 +12,34 @@ namespace FurnitureFramework.Data.FType.Properties
 	}
 
 	[JsonConverter(typeof(FieldConverter<Sound>))]
-	public class Sound : Field
-	{
-		public SoundMode Mode;
-		public string Name = "";
+    public class Sound : Field
+    {
+        public SoundMode Mode;
+        public string Name = "";
 
-		[OnDeserialized]
-		private void Validate(StreamingContext context)
-		{
-			if (Name == "" || !Game1.soundBank.Exists(Name))
-			{
-				ModEntry.Log($"Invalid Sound Name: \"{Name}\"", StardewModdingAPI.LogLevel.Error);
-				throw new InvalidDataException($"Invalid Sound Name: \"{Name}\"");
-			}
-			else is_valid = true;
+        [OnDeserialized]
+        private void Validate(StreamingContext context)
+        {
+            bool nameIsEmpty = string.IsNullOrEmpty(Name);
+            bool soundMissing = false;
+
+#if !IS_ANDROID
+            if (!nameIsEmpty && Game1.soundBank != null && !Game1.soundBank.Exists(Name))
+            {
+                soundMissing = true;
+            }
+#else
+            soundMissing = false; 
+#endif
+
+            if (nameIsEmpty || soundMissing)
+            {
+                ModEntry.Log($"Invalid Sound Name: \"{Name}\"", StardewModdingAPI.LogLevel.Error);
+                throw new InvalidDataException($"Invalid Sound Name: \"{Name}\"");
+            }
+            else
+            {
+                is_valid = true;
 		}
 	}
 
