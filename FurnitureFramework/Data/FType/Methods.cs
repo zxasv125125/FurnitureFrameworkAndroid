@@ -1,10 +1,14 @@
-using FurnitureFramework.Data.FType.Properties;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 using StardewValley.Locations;
 using StardewValley.Menus;
 using StardewValley.Objects;
+using FurnitureFramework.Data.FType.Properties;
+using HarmonyLib;
 
 namespace FurnitureFramework.Data.FType
 {
@@ -57,7 +61,7 @@ namespace FurnitureFramework.Data.FType
 			if (rot < 0) rot = 0;
 
 			furniture.currentRotation.Value = rot;
-			furniture.updateRotation();
+			furniture.updateRotation(furniture);
 		}
 
 		public void updateRotation(Furniture furniture)
@@ -75,7 +79,6 @@ namespace FurnitureFramework.Data.FType
 
 		public void GetSeatPositions(Furniture furniture, ref List<Vector2> list)
 		{
-			// This is a postfix, it keeps the original seat positions.
 
 			string rot = GetRot(furniture);
 			Vector2 tile_pos = furniture.boundingBox.Value.Location.ToVector2() / 64f;
@@ -405,7 +408,7 @@ namespace FurnitureFramework.Data.FType
 
 		#region Storage
 
-				public void setUpStoreForContext(ShopMenu shop_menu, ref bool _isStorageShop)
+		public void setUpStoreForContext(ShopMenu shop_menu, ref bool _isStorageShop)
 		{
 			if (SpecialType != SpecialType.FFStorage) return;
 			shop_menu.purchaseSound = null;
@@ -413,7 +416,11 @@ namespace FurnitureFramework.Data.FType
 			_isStorageShop = true;
 
 #if IS_ANDROID
+			// -----------------------------------------------------------------------
+			// [ANDROID]
+			// -----------------------------------------------------------------------
 			shop_menu.tabButtons = new List<ClickableTextureComponent>();
+			
 			ClickableTextureComponent clickableTextureComponent = new ClickableTextureComponent(
 				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f);
 			ClickableTextureComponent clickableTextureComponent2 = new ClickableTextureComponent(
@@ -438,7 +445,7 @@ namespace FurnitureFramework.Data.FType
 					return;
 
 				case StoragePreset.FurnitureCatalogue:
-					// Logic พิเศษสำหรับแยก Joja/Wizard บน Android
+					// Logic พิเศษสำหรับแยก Catalogue บน Android
 					string currentItemName = this.Variants.Keys.FirstOrDefault() ?? "";
 					if (currentItemName.Contains("JojaFurnitureCatalogue") || 
 						currentItemName.Contains("WizardFurnitureCatalogue") || 
@@ -474,6 +481,9 @@ namespace FurnitureFramework.Data.FType
 			shop_menu.repositionTabs();
 
 #else
+			// -----------------------------------------------------------------------
+			// [PC]
+			// -----------------------------------------------------------------------
 			shop_menu.tabButtons = new();
 			switch (StoragePreset)
 			{
@@ -508,7 +518,12 @@ namespace FurnitureFramework.Data.FType
 					return item is Furniture;
 			}
 			if (StorageCondition == null) return true;
+
+#if IS_ANDROID
+			return true; 
+#else
 			return GameStateQuery.CheckConditions(StorageCondition, inputItem:item);
+#endif
 		}
 		
 		#endregion
@@ -730,4 +745,57 @@ namespace FurnitureFramework.Data.FType
 			Particles[rot].Burst(furniture, ModID);
 		}
 	}
+
+	// -------------------------------------------------------------------------------
+	// Harmony Patch
+	// -------------------------------------------------------------------------------
+#if IS_ANDROID
+    [HarmonyPatch(typeof(ShopMenu), "applyTab")]
+    public static class ShopMenuPatch
+    {
+        public static void Postfix(ShopMenu __instance)
+        {
+            int currentTabID = __instance.currentTab;
+		
+            if (TabProperty.ActiveTabConditions.TryGetValue(currentTabID, out string condition))
+            {
+                __instance.forSale.Clear();
+                foreach (ISalable item in __instance.itemPriceAndStock.Keys)
+                {
+                    if (CheckCondition(item, condition))
+                    {
+                        __instance.forSale.Add(item);
+                    }
+                }
+            }
+        }
+
+        private static bool CheckCondition(ISalable item, string condition)
+        {
+            if (item is not Item stardewItem) return false;
+
+            if (condition.Contains("ITEM_CATEGORY"))
+            {
+                if (condition.Contains("-96") && stardewItem.Category == -96) return true; // Ring
+            }
+
+            if (condition.Contains("ITEM_TYPE"))
+            {
+                if (condition.Contains("(W)") && stardewItem is StardewValley.Tools.MeleeWeapon) return true;
+                if (condition.Contains("(TR)") && stardewItem.Category == -96) return true; // ใน 1.5 Trinket ยังไม่มี ถือว่าเป็น Ring ไปก่อน
+            }
+            
+            if (condition.Contains("WEAPON_TYPE Input 0 3"))
+                return stardewItem is StardewValley.Tools.MeleeWeapon w && (w.type.Value == 0 || w.type.Value == 3);
+            
+            if (condition.Contains("WEAPON_TYPE Input 2"))
+                return stardewItem is StardewValley.Tools.MeleeWeapon w && w.type.Value == 2;
+                
+            if (condition.Contains("WEAPON_TYPE Input 1"))
+                return stardewItem is StardewValley.Tools.MeleeWeapon w && w.type.Value == 1;
+
+            return true;
+        }
+    }
+#endif
 }
