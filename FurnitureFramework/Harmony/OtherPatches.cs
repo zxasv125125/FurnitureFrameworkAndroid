@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using FurnitureFramework.Data.FPack;
 using HarmonyLib;
-using Microsoft.Xna.Framework; // เพิ่มบรรทัดนี้ เพื่อให้ใช้ Rectangle ได้
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
