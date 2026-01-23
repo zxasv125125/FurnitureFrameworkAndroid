@@ -46,7 +46,6 @@ namespace FurnitureFramework.Data.FType
 
 		string GetRot(Furniture furniture)
 		{
-			// Just in case there is a corrupted furniture.
 			if (furniture.currentRotation.Value >= Rotations.Count)
 				furniture.currentRotation.Set(0);
 			return Rotations[furniture.currentRotation.Value];
@@ -61,7 +60,7 @@ namespace FurnitureFramework.Data.FType
 			if (rot < 0) rot = 0;
 
 			furniture.currentRotation.Value = rot;
-			furniture.updateRotation(furniture);
+			this.updateRotation(furniture); // ระบุ this เพื่อเรียก method ใน class นี้
 		}
 
 		public void updateRotation(Furniture furniture)
@@ -79,10 +78,8 @@ namespace FurnitureFramework.Data.FType
 
 		public void GetSeatPositions(Furniture furniture, ref List<Vector2> list)
 		{
-
 			string rot = GetRot(furniture);
 			Vector2 tile_pos = furniture.boundingBox.Value.Location.ToVector2() / 64f;
-
 			Seats[rot].GetSeatPositions(tile_pos, list);
 		}
 
@@ -110,12 +107,7 @@ namespace FurnitureFramework.Data.FType
 
 		public void IntersectsForCollision(Furniture furniture, Rectangle rect, ref bool collides)
 		{
-			if (!collides)
-			{
-				// not even in bounding box, or collision canceled
-				return;
-			}
-
+			if (!collides) return;
 			if (PlacementType == PlacementType.Rug)
 			{
 				collides = false;
@@ -127,25 +119,16 @@ namespace FurnitureFramework.Data.FType
 			collides = Collisions[rot].IsColliding(rect, pos);
 		}
 
-		public void canBePlacedHere(
-			Furniture furniture, GameLocation loc, Vector2 tile,
-			CollisionMask collisionMask, ref bool result
-		)
+		public void canBePlacedHere(Furniture furniture, GameLocation loc, Vector2 tile, CollisionMask collisionMask, ref bool result)
 		{
-			// don't change this part
-
 			if (!loc.CanPlaceThisFurnitureHere(furniture)) return;
 
 			if (!furniture.isGroundFurniture())
-			{
 				tile.Y = furniture.GetModifiedWallTilePosition(loc, (int)tile.X, (int)tile.Y);
-			}
 
 			CollisionMask passable_ignored = CollisionMask.Buildings | CollisionMask.Flooring | CollisionMask.TerrainFeatures;
 			if (furniture.isPassable()) passable_ignored |= CollisionMask.Characters | CollisionMask.Farmers;
 			collisionMask &= ~(CollisionMask.Furniture | CollisionMask.Objects);
-
-			// Actual collision detection made by Collisions
 
 			string rot = GetRot(furniture);
 			if (!Collisions[rot].CanBePlacedHere(furniture, loc, tile.ToPoint(), collisionMask, passable_ignored))
@@ -156,25 +139,15 @@ namespace FurnitureFramework.Data.FType
 
 			if (PlacementType == PlacementType.Mural)
 			{
-
 				Point point = tile.ToPoint();
-
 				if (loc is not DecoratableLocation dec_loc)
 				{
 					result = false;
 					return;
 				}
 
-				if (
-					!((
-						dec_loc.isTileOnWall(point.X, point.Y) &&
-						dec_loc.GetWallTopY(point.X, point.Y) == point.Y
-					) ||
-					(
-						dec_loc.isTileOnWall(point.X, point.Y - 1) &&
-						dec_loc.GetWallTopY(point.X, point.Y) + 1 == point.Y
-					))
-				)
+				if (!((dec_loc.isTileOnWall(point.X, point.Y) && dec_loc.GetWallTopY(point.X, point.Y) == point.Y) ||
+					(dec_loc.isTileOnWall(point.X, point.Y - 1) && dec_loc.GetWallTopY(point.X, point.Y) + 1 == point.Y)))
 				{
 					result = false;
 					return;
@@ -188,12 +161,11 @@ namespace FurnitureFramework.Data.FType
 			}
 
 			result = true;
-			return;
 		}
 
 		public static void AllowPlacementOnThisTile(Furniture furniture, int x, int y, ref bool allow)
 		{
-			if (allow) return;	// Furniture Placement Tweaks compat
+			if (allow) return;
 			allow = !IsClicked(furniture, x * 64, y * 64);
 		}
 
@@ -206,10 +178,7 @@ namespace FurnitureFramework.Data.FType
 			if (rot == "") rot = GetRot(furniture);
 
 			int slots_count = Slots[rot].Count;
-			Point position = new(
-				furniture.boundingBox.Left,
-				furniture.boundingBox.Bottom
-			);
+			Point position = new(furniture.boundingBox.Left, furniture.boundingBox.Bottom);
 
 			if (furniture.heldObject.Value is not Chest chest)
 			{
@@ -227,20 +196,12 @@ namespace FurnitureFramework.Data.FType
 				Item? item = chest.Items[slots_count];
 				chest.Items.RemoveAt(slots_count);
 				if (item is null) continue;
-				Game1.createItemDebris(
-					item,
-					furniture.boundingBox.Center.ToVector2(),
-					0
-				);
+				Game1.createItemDebris(item, furniture.boundingBox.Center.ToVector2(), 0);
 			}
 
 			if (chest.Items.Count < slots_count)
 			{
-				chest.Items.AddRange(
-					Enumerable.Repeat<Item?>(null,
-						slots_count - chest.Items.Count
-					).ToList()
-				);
+				chest.Items.AddRange(Enumerable.Repeat<Item?>(null, slots_count - chest.Items.Count).ToList());
 			}
 		}
 
@@ -254,19 +215,13 @@ namespace FurnitureFramework.Data.FType
 		public bool PlaceInSlot(Furniture furniture, Point pos, Farmer who, SVObject obj)
 		{
 			string rot = GetRot(furniture);
-
 			if (furniture.heldObject.Value is not Chest chest) return false;
-			// Furniture is not a proper initialized table
 
 			int slot_index = Slots[rot].GetEmptySlot(GetRelPos(furniture, pos), chest, who, furniture, obj);
 			if (slot_index < 0) return false;
-			// No slot found at this pixel
 
 			obj.Location = furniture.Location;
-			Slots[rot][slot_index].SetBox(obj, new Point(
-				furniture.boundingBox.Left,
-				furniture.boundingBox.Bottom
-			));
+			Slots[rot][slot_index].SetBox(obj, new Point(furniture.boundingBox.Left, furniture.boundingBox.Bottom));
 			chest.Items[slot_index] = obj;
 			who.reduceActiveItemByOne();
 			Game1.currentLocation.playSound("woodyStep");
@@ -278,13 +233,10 @@ namespace FurnitureFramework.Data.FType
 		public bool RemoveFromSlot(Furniture furniture, Point pos, Farmer who)
 		{
 			string rot = GetRot(furniture);
-
 			if (furniture.heldObject.Value is not Chest chest) return false;
-			// Furniture is not a proper initialized table
 
 			int slot_index = Slots[rot].GetFilledSlot(GetRelPos(furniture, pos), chest, out SVObject? obj);
 			if (slot_index < 0 || obj is null) return false;
-			// No slot found at this pixel
 
 			if (who.addItemToInventoryBool(obj))
 			{
@@ -293,41 +245,30 @@ namespace FurnitureFramework.Data.FType
 				Game1.playSound("coin");
 				return true;
 			}
-
 			return false;
 		}
 
 		public bool ActionInSlot(Furniture furniture, Point pos, Farmer who)
 		{
 			string rot = GetRot(furniture);
-
 			if (furniture.heldObject.Value is not Chest chest) return false;
-			// Furniture is not a proper initialized table
 
 			int slot_index = Slots[rot].GetFilledSlot(GetRelPos(furniture, pos), chest, out SVObject? obj);
 			if (slot_index < 0 || obj is not Furniture furn) return false;
-			// No slot found at this pixel or item is not a Furniture
 
 			return furn.checkForAction(who);
 		}
 
-		// used in Furniture.canBeRemoved Transpiler
 		public static bool HasHeldObject(Furniture furniture)
 		{
 			SVObject held_obj = furniture.heldObject.Value;
 			if (held_obj == null) return false;
-
 			if (held_obj is Chest chest)
 			{
 				foreach (Item? item in chest.Items)
-				{
-					if (item != null)
-						return true;
-				}
-
-				return false;   // empty chest
+					if (item != null) return true;
+				return false;
 			}
-
 			return true;
 		}
 
@@ -335,15 +276,8 @@ namespace FurnitureFramework.Data.FType
 
 		#region Methods for Placement Type
 
-		public void isGroundFurniture(ref bool is_ground_f)
-		{
-			is_ground_f = PlacementType != PlacementType.Mural;
-		}
-
-		public void isPassable(ref bool is_passable)
-		{
-			is_passable = PlacementType == PlacementType.Rug;
-		}
+		public void isGroundFurniture(ref bool is_ground_f) => is_ground_f = PlacementType != PlacementType.Mural;
+		public void isPassable(ref bool is_passable) => is_passable = PlacementType == PlacementType.Rug;
 
 		#endregion
 
@@ -358,17 +292,10 @@ namespace FurnitureFramework.Data.FType
 			position += ScreenPosition[GetRot(furniture)].ToVector2() * 4f;
 		}
 
-		public void getScreenSizeModifier(ref float scale)
-		{
-			scale = ScreenScale;
-		}
-
+		public void getScreenSizeModifier(ref float scale) => scale = ScreenScale;
 		#endregion
 
-		public void GetBedSpot(BedFurniture furniture, ref Point spot)
-		{
-			spot = furniture.TileLocation.ToPoint() + BedSpot;
-		}
+		public void GetBedSpot(BedFurniture furniture, ref Point spot) => spot = furniture.TileLocation.ToPoint() + BedSpot;
 
 		public void GetTankBounds(FishTankFurniture furniture, ref Rectangle result)
 		{
@@ -376,33 +303,19 @@ namespace FurnitureFramework.Data.FType
 			Rectangle bounding_box = furniture.boundingBox.Value;
 			Rectangle source_rect = Layers[rot][0].SourceRect;
 
-			Point position = new(
-				bounding_box.X,
-				bounding_box.Y + bounding_box.Height
-			);  // bottom left of the bounding box
+			Point position = new(bounding_box.X, bounding_box.Y + bounding_box.Height);
 			Point size = source_rect.Size * new Point(4);
-
 			Rectangle area = FishArea[rot];
 
 			if (area.IsEmpty)
 			{
 				position.Y -= source_rect.Height * 4;
 				position += Layers[rot][0].DrawPos * new Point(4);
-				// top left of the base layer
-
-				result = new Rectangle(
-					position + new Point(4, 64),
-					size - new Point(8, 92)
-				// offsets taken from vanilla code
-				);
+				result = new Rectangle(position + new Point(4, 64), size - new Point(8, 92));
 			}
-
 			else
 			{
-				result = new Rectangle(
-					position + area.Location * new Point(4),
-					area.Size * new Point(4)
-				);
+				result = new Rectangle(position + area.Location * new Point(4), area.Size * new Point(4));
 			}
 		}
 
@@ -416,91 +329,59 @@ namespace FurnitureFramework.Data.FType
 			_isStorageShop = true;
 
 #if IS_ANDROID
-			// -----------------------------------------------------------------------
-			// [ANDROID]
-			// -----------------------------------------------------------------------
 			shop_menu.tabButtons = new List<ClickableTextureComponent>();
 			
-			ClickableTextureComponent clickableTextureComponent = new ClickableTextureComponent(
-				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f);
-			ClickableTextureComponent clickableTextureComponent2 = new ClickableTextureComponent(
-				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(36, 20, 16, 16), 4f);
-			ClickableTextureComponent clickableTextureComponent3 = new ClickableTextureComponent(
-				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(52, 20, 16, 16), 4f);
+			var tab1 = new ClickableTextureComponent(new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f);
+			var tab2 = new ClickableTextureComponent(new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(36, 20, 16, 16), 4f);
+			var tab3 = new ClickableTextureComponent(new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(52, 20, 16, 16), 4f);
 
 			switch (StoragePreset)
 			{
 				case StoragePreset.Dresser:
 					shop_menu.ShopId = "Dresser";
-					shop_menu.tabButtons.Add(clickableTextureComponent);
+					shop_menu.tabButtons.Add(tab1);
 					shop_menu.setUpStoreForContext();
 					shop_menu.applyTab();
 					return;
-
 				case StoragePreset.Catalogue:
 					shop_menu.ShopId = "Catalogue";
-					shop_menu.tabButtons.Add(clickableTextureComponent2);
+					shop_menu.tabButtons.Add(tab2);
 					shop_menu.setUpStoreForContext();
 					shop_menu.applyTab();
 					return;
-
 				case StoragePreset.FurnitureCatalogue:
-					// Logic พิเศษสำหรับแยก Catalogue บน Android
-					string currentItemName = this.Variants.Keys.FirstOrDefault() ?? "";
-					if (currentItemName.Contains("JojaFurnitureCatalogue") || 
-						currentItemName.Contains("WizardFurnitureCatalogue") || 
-						currentItemName.Contains("JunimoFurnitureCatalogue") || 
-						currentItemName.Contains("RetroFurnitureCatalogue") || 
-						currentItemName.Contains("TrashFurnitureCatalogue"))
-					{
-						shop_menu.ShopId = currentItemName;
-					}
+					string curID = this.Variants.Keys.FirstOrDefault() ?? "";
+					if (curID.Contains("JojaFurnitureCatalogue") || curID.Contains("WizardFurnitureCatalogue") || 
+						curID.Contains("JunimoFurnitureCatalogue") || curID.Contains("RetroFurnitureCatalogue") || 
+						curID.Contains("TrashFurnitureCatalogue"))
+						shop_menu.ShopId = curID;
 					else
-					{
 						shop_menu.ShopId = "Furniture Catalogue";
-					}
 					
-					shop_menu.tabButtons.Add(clickableTextureComponent3);
+					shop_menu.tabButtons.Add(tab3);
 					shop_menu.setUpStoreForContext();
 					shop_menu.applyTab();
 					return;
 			}
 
-			try 
-			{
+			try {
 				foreach ((TabProperty tab_prop, int idx) in StorageTabs.Select((value, index) => (value, index)))
-				{
 					tab_prop.AddTab(shop_menu, ModID, idx);
-				}
+			} catch (Exception ex) {
+				ModEntry.Log($"[Error] Failed to create custom tabs: {ex.Message}", StardewModdingAPI.LogLevel.Error);
 			}
-			catch (System.Exception ex)
-			{
-				ModEntry.Log($"[Error] Failed to create custom tabs in Methods.cs: {ex.Message}", StardewModdingAPI.LogLevel.Error);
-			}
-
 			shop_menu.repositionTabs();
-
 #else
-			// -----------------------------------------------------------------------
-			// [PC]
-			// -----------------------------------------------------------------------
 			shop_menu.tabButtons = new();
 			switch (StoragePreset)
 			{
-				case StoragePreset.Dresser:
-					shop_menu.UseDresserTabs();
-					return;
-				case StoragePreset.Catalogue:
-					shop_menu.UseCatalogueTabs();
-					return;
-				case StoragePreset.FurnitureCatalogue:
-					shop_menu.UseFurnitureCatalogueTabs();
-					return;
+				case StoragePreset.Dresser: shop_menu.UseDresserTabs(); return;
+				case StoragePreset.Catalogue: shop_menu.UseCatalogueTabs(); return;
+				case StoragePreset.FurnitureCatalogue: shop_menu.UseFurnitureCatalogueTabs(); return;
 			}
 
 			foreach ((TabProperty tab_prop, int idx) in StorageTabs.Select((value, index) => (value, index)))
 				tab_prop.AddTab(shop_menu, ModID, idx);
-			
 			shop_menu.repositionTabs();
 #endif
 		}
@@ -510,69 +391,43 @@ namespace FurnitureFramework.Data.FType
 			if (SpecialType != SpecialType.FFStorage) return false;
 			switch (StoragePreset)
 			{
-				case StoragePreset.Dresser:
-					return new List<int>(){ -95, -100, -97, -96 }.Contains(item.Category);
-				case StoragePreset.Catalogue:
-					return item is Wallpaper;
-				case StoragePreset.FurnitureCatalogue:
-					return item is Furniture;
+				case StoragePreset.Dresser: return new List<int>(){ -95, -100, -97, -96 }.Contains(item.Category);
+				case StoragePreset.Catalogue: return item is Wallpaper;
+				case StoragePreset.FurnitureCatalogue: return item is Furniture;
 			}
 			if (StorageCondition == null) return true;
-
 #if IS_ANDROID
 			return true; 
 #else
 			return GameStateQuery.CheckConditions(StorageCondition, inputItem:item);
 #endif
 		}
-		
 		#endregion
-
 		#endregion
 
 		#region Methods for Transpilers
 
 		public static bool IsClicked(Furniture furniture, int x, int y)
 		{
-			if (
-				!FPack.FPack.TryGetType(furniture, out FType? type)
-				|| type.PlacementType == PlacementType.Rug
-			)
-			{
+			if (!FPack.FPack.TryGetType(furniture, out FType? type) || type.PlacementType == PlacementType.Rug)
 				return furniture.boundingBox.Value.Contains(x, y);
-			}
 
-			else
-			{
-				Rectangle rect = new(x, y, 1, 1);
-				bool clicks = furniture.boundingBox.Value.Intersects(rect);
-				type.IntersectsForCollision(furniture, rect, ref clicks);
-				return clicks;
-			}
+			Rectangle rect = new(x, y, 1, 1);
+			bool clicks = furniture.boundingBox.Value.Intersects(rect);
+			type.IntersectsForCollision(furniture, rect, ref clicks);
+			return clicks;
 		}
 
-		public static bool IsClicked(Furniture furniture, Point pos)
-		{
-			return IsClicked(furniture, pos.X, pos.Y);
-		}
+		public static bool IsClicked(Furniture furniture, Point pos) => IsClicked(furniture, pos.X, pos.Y);
 
 		public static void DrawLighting(SpriteBatch sprite_batch)
 		{
 			foreach (Furniture furniture in Game1.currentLocation.furniture)
 			{
 				if (FPack.FPack.TryGetType(furniture, out FType? type))
-				{
 					type.DrawLights(furniture, sprite_batch);
-				}
-
-				else if (
-					furniture.heldObject.Value is Furniture held_furn &&
-					FPack.FPack.TryGetType(held_furn, out FType? held_type)
-				)
-				{
-					// maybe move the held furniture bounding box in the middle?
+				else if (furniture.heldObject.Value is Furniture held_furn && FPack.FPack.TryGetType(held_furn, out FType? held_type))
 					held_type.DrawLights(held_furn, sprite_batch);
-				}
 			}
 		}
 
@@ -584,7 +439,7 @@ namespace FurnitureFramework.Data.FType
 				depth = type.ScreenDepth[type.GetRot(furniture)].GetValue(furniture.GetBoundingBox().Top);
 				depth = MathF.BitIncrement(depth);
 			}
-			else depth = (furniture.boundingBox.Bottom - 1) / 10000f + 1E-05f;	// Vanilla f
+			else depth = (furniture.boundingBox.Bottom - 1) / 10000f + 1E-05f;
 			if (overlay) depth = MathF.BitIncrement(depth);
 			return depth;
 		}
@@ -593,7 +448,6 @@ namespace FurnitureFramework.Data.FType
 
 		public static void DayUpdate(Furniture furniture)
 		{
-			// Checking for the Santa easter-egg for multiple slots
 			if (Game1.IsMasterGame && Game1.season == Season.Winter && Game1.dayOfMonth == 25 && furniture.heldObject.Value is Chest chest)
 			{
 				foreach ((Item item, int index) in chest.Items.Select((value, index) => (value, index)))
@@ -602,13 +456,11 @@ namespace FurnitureFramework.Data.FType
 					{
 						chest.Items[index] = ItemRegistry.Create<SVObject>("(O)MysteryBox");
 						Game1.player.mailReceived.Add("CookiePresent_year" + Game1.year);
-						continue;
 					}
 					else if (item.Category == -6 && !Game1.player.mailReceived.Contains("MilkPresent_year" + Game1.year))
 					{
 						chest.Items[index] = ItemRegistry.Create<SVObject>("(O)MysteryBox");
 						Game1.player.mailReceived.Add("MilkPresent_year" + Game1.year);
-						continue;
 					}
 				}
 			}
@@ -617,58 +469,32 @@ namespace FurnitureFramework.Data.FType
 		public void updateWhenCurrentLocation(Furniture furniture)
 		{
 			string rot = GetRot(furniture);
-
-			// Updating Particles
 			long ms_time = (long)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
 			Particles[rot].UpdateTimer(furniture, ms_time, ModID);
 
-			// Checking bed intersection
 			if (SpecialType == SpecialType.Bed)
 			{
-				// Computing the collisions of the "Do you want to go to bed?" dialogue.
 				Rectangle bed_col;
-
 				if (BedArea == null)
 				{
 					Point bed_size = Collisions[rot].GameSize;
-					Point area_size = new(
-						Math.Max(64, bed_size.X - 64 * 2),
-						Math.Max(64, bed_size.Y - 64 * 2)
-					);
-					bed_col = new Rectangle(
-						(bed_size - area_size) / new Point(2),
-						area_size
-					);
+					Point area_size = new(Math.Max(64, bed_size.X - 128), Math.Max(64, bed_size.Y - 128));
+					bed_col = new Rectangle((bed_size - area_size) / new Point(2), area_size);
 				}
-				else
-				{
-					bed_col = new Rectangle(
-						BedArea.Value.Location * new Point(4),
-						BedArea.Value.Size * new Point(4)
-					);
-				}
+				else bed_col = new Rectangle(BedArea.Value.Location * new Point(4), BedArea.Value.Size * new Point(4));
 
 				bed_col.Location += furniture.boundingBox.Value.Location;
-				GameLocation location = furniture.Location;
 				bool contains = bed_col.Contains(Game1.player.GetBoundingBox());
 
 				if (!furniture.modData.ContainsKey("FF.checked_bed_tile"))
-				{
 					furniture.modData["FF.checked_bed_tile"] = contains.ToString().ToLower();
-				}
 
 				if (contains)
 				{
-					if (furniture.modData["FF.checked_bed_tile"] != "true" &&
-						!Game1.newDay && Game1.shouldTimePass() &&
-						Game1.player.hasMoved && !Game1.player.passedOut
-					)
+					if (furniture.modData["FF.checked_bed_tile"] != "true" && !Game1.newDay && Game1.shouldTimePass() && Game1.player.hasMoved && !Game1.player.passedOut)
 					{
 						furniture.modData["FF.checked_bed_tile"] = "true";
-						location.createQuestionDialogue(
-							Game1.content.LoadString("Strings\\Locations:FarmHouse_Bed_GoToSleep"),
-							location.createYesNoResponses(), "Sleep", null
-						);
+						furniture.Location.createQuestionDialogue(Game1.content.LoadString("Strings\\Locations:FarmHouse_Bed_GoToSleep"), furniture.Location.createYesNoResponses(), "Sleep", null);
 					}
 				}
 				else furniture.modData["FF.checked_bed_tile"] = "false";
@@ -678,51 +504,25 @@ namespace FurnitureFramework.Data.FType
 		public void checkForAction(Furniture furniture, Farmer who, bool justCheckingForActivity, ref bool had_action)
 		{
 			if (justCheckingForActivity) return;
-			// had_action is already true from original method
-
 			string rot = GetRot(furniture);
+			if (ShopId != null && Utility.TryOpenShopMenu(ShopId, Game1.currentLocation)) had_action = true;
 
-			// None of these actions are blocking other actions because I couldn't find a reason why they should.
-
-			// Shop
-			if (ShopId != null)
-			{
-				if (Utility.TryOpenShopMenu(ShopId, Game1.currentLocation))
-					had_action = true;
-			}
-
-			// Toggle
 			if (Toggle)
 			{
 				ToggleFurn(furniture);
-
-				if (ModEntry.GetConfig().toggle_carry_to_slot &&
-					furniture.heldObject.Value is Chest held_chest)
-				{
+				if (ModEntry.GetConfig().toggle_carry_to_slot && furniture.heldObject.Value is Chest held_chest)
 					foreach (Item item in held_chest.Items)
-					{
-						if (item is Furniture furn && FPack.FPack.TryGetType(furn, out FType? f_type))
-							f_type.ToggleFurn(furn);
-					}
-				}
-				
+						if (item is Furniture furn && FPack.FPack.TryGetType(furn, out FType? f_type)) f_type.ToggleFurn(furn);
 				had_action = true;
 			}
-			else
-			{
-				had_action |= Sounds.Play(furniture.Location);
-			}
+			else had_action |= Sounds.Play(furniture.Location);
 
-			// Seats
 			if (Seats[rot].Count > 0)
 			{
 				int sit_count = furniture.GetSittingFarmerCount();
 				who.BeginSitting(furniture);
-				if (furniture.GetSittingFarmerCount() > sit_count)
-					had_action = true;
+				if (furniture.GetSittingFarmerCount() > sit_count) had_action = true;
 			}
-
-			// maybe add place in slot or remove from slot?
 		}
 
 		public void ToggleFurn(Furniture furniture)
@@ -730,7 +530,6 @@ namespace FurnitureFramework.Data.FType
 			furniture.IsOn = !furniture.IsOn;
 			Sounds.Play(furniture.Location, furniture.IsOn);
 			Particles[GetRot(furniture)].Burst(furniture, ModID);
-
 		}
 
 		public static void OnRemoved(Furniture furniture)
@@ -739,61 +538,40 @@ namespace FurnitureFramework.Data.FType
 			furniture.heldObject.Value = null;
 		}
 
-		public void OnPlaced(Furniture furniture)
-		{
-			string rot = GetRot(furniture);
-			Particles[rot].Burst(furniture, ModID);
-		}
+		public void OnPlaced(Furniture furniture) => Particles[GetRot(furniture)].Burst(furniture, ModID);
 	}
 
-	// -------------------------------------------------------------------------------
-	// Harmony Patch
-	// -------------------------------------------------------------------------------
 #if IS_ANDROID
     [HarmonyPatch(typeof(ShopMenu), "applyTab")]
     public static class ShopMenuPatch
     {
         public static void Postfix(ShopMenu __instance)
         {
-            int currentTabID = __instance.currentTab;
+            int currentTabID = (int)AccessTools.Field(typeof(ShopMenu), "currentTab").GetValue(__instance);
 		
             if (TabProperty.ActiveTabConditions.TryGetValue(currentTabID, out string condition))
             {
                 __instance.forSale.Clear();
                 foreach (ISalable item in __instance.itemPriceAndStock.Keys)
-                {
-                    if (CheckCondition(item, condition))
-                    {
-                        __instance.forSale.Add(item);
-                    }
-                }
+                    if (CheckCondition(item, condition)) __instance.forSale.Add(item);
             }
         }
 
         private static bool CheckCondition(ISalable item, string condition)
         {
             if (item is not Item stardewItem) return false;
-
-            if (condition.Contains("ITEM_CATEGORY"))
-            {
-                if (condition.Contains("-96") && stardewItem.Category == -96) return true; // Ring
-            }
-
+            if (condition.Contains("ITEM_CATEGORY") && condition.Contains("-96") && stardewItem.Category == -96) return true;
             if (condition.Contains("ITEM_TYPE"))
             {
                 if (condition.Contains("(W)") && stardewItem is StardewValley.Tools.MeleeWeapon) return true;
-                if (condition.Contains("(TR)") && stardewItem.Category == -96) return true; // ใน 1.5 Trinket ยังไม่มี ถือว่าเป็น Ring ไปก่อน
+                if (condition.Contains("(TR)") && stardewItem.Category == -96) return true;
             }
-            
-            if (condition.Contains("WEAPON_TYPE Input 0 3"))
-                return stardewItem is StardewValley.Tools.MeleeWeapon w && (w.type.Value == 0 || w.type.Value == 3);
-            
-            if (condition.Contains("WEAPON_TYPE Input 2"))
-                return stardewItem is StardewValley.Tools.MeleeWeapon w && w.type.Value == 2;
-                
-            if (condition.Contains("WEAPON_TYPE Input 1"))
-                return stardewItem is StardewValley.Tools.MeleeWeapon w && w.type.Value == 1;
-
+            if (stardewItem is StardewValley.Tools.MeleeWeapon w)
+            {
+                if (condition.Contains("WEAPON_TYPE Input 0 3") && (w.type.Value == 0 || w.type.Value == 3)) return true;
+                if (condition.Contains("WEAPON_TYPE Input 2") && w.type.Value == 2) return true;
+                if (condition.Contains("WEAPON_TYPE Input 1") && w.type.Value == 1) return true;
+            }
             return true;
         }
     }
