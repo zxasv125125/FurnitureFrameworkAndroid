@@ -1,6 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Reflection.Emit;
 using FurnitureFramework.Data.FPack;
 using HarmonyLib;
+using Microsoft.Xna.Framework; // เพิ่มบรรทัดนี้ เพื่อให้ใช้ Rectangle ได้
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
@@ -26,7 +29,8 @@ namespace FurnitureFramework.FFHarmony.Patches
 
 			try
 			{
-				if (FPack.TryGetType(furniture, out Data.FType.FType? type))
+				// เรียก namespace เต็ม เพื่อความชัวร์
+				if (FPack.FPack.TryGetType(furniture, out Data.FType.FType? type))
 					type.GetSittingDepth(furniture, __instance, ref __result);
 			}
 			catch (Exception ex)
@@ -46,18 +50,6 @@ namespace FurnitureFramework.FFHarmony.Patches
 		#pragma warning restore 0414
 
 		#region DrawLighting
-
-/*
-Insert :
-
-ldsfld class Microsoft.Xna.Framework.Graphics.SpriteBatch StardewValley.Game1::spriteBatch
-call void Type.FurnitureType.draw_lighting(Microsoft.Xna.Framework.Graphics.SpriteBatch)
-
-Before :
-
-ldsfld class Microsoft.Xna.Framework.Graphics.SpriteBatch StardewValley.Game1::spriteBatch
-callvirt instance void Microsoft.Xna.Framework.Graphics.SpriteBatch::End()
-*/
 
 		static IEnumerable<CodeInstruction> DrawLighting(
 			IEnumerable<CodeInstruction> instructions
@@ -129,16 +121,6 @@ callvirt instance void Microsoft.Xna.Framework.Graphics.SpriteBatch::End()
 		#pragma warning restore 0414
 
 		#region canGrabSomethingFromHere
-/* 	Replace :
-
-ldfld class Netcode.NetRef`1<class StardewValley.Object> StardewValley.Object::heldObject
-callvirt instance !0 class Netcode.NetFieldBase`2<class StardewValley.Object, class Netcode.NetRef`1<class StardewValley.Object>>::get_Value()
-
-	With :
-
-call check_held_object
-
-*/
 
 		static IEnumerable<CodeInstruction> canGrabSomethingFromHere(
 			IEnumerable<CodeInstruction> instructions
@@ -183,11 +165,24 @@ call check_held_object
 		{
 			try
 			{
-				if (FPack.TryGetType(__instance, out Data.FType.FType? type))
+				if (FPack.FPack.TryGetType(__instance, out Data.FType.FType? type))
 					type.setUpStoreForContext(__instance, ref ____isStorageShop);
-				
 				if (__instance.ShopId == "leroymilo.FF.debug_catalog")
+				{
+#if IS_ANDROID
+					if (__instance.tabButtons == null) 
+						__instance.tabButtons = new List<ClickableTextureComponent>();
+					__instance.tabButtons.Add(new ClickableTextureComponent3(
+						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f));
+					__instance.tabButtons.Add(new ClickableTextureComponent3(
+						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(36, 20, 16, 16), 4f));
+					__instance.tabButtons.Add(new ClickableTextureComponent3(
+						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(52, 20, 16, 16), 4f));
+					__instance.repositionTabs();
+#else
 					__instance.UseFurnitureCatalogueTabs();
+#endif
+				}
 			}
 			catch (Exception ex)
 			{
@@ -203,7 +198,7 @@ call check_held_object
 		{
 			try
 			{
-				if (FPack.TryGetType(__instance, out Data.FType.FType? type))
+				if (FPack.FPack.TryGetType(__instance, out Data.FType.FType? type))
 					return type.highlightItemToSell(i);
 			}
 			catch (Exception ex)
