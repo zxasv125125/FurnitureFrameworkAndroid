@@ -8,7 +8,6 @@ using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Objects;
-// ระบุ namespace ให้ชัดเจนเพื่อแก้ปัญหา FPack.FPack
 using FurnitureType = FurnitureFramework.Data.FType.FType;
 using FurniturePack = FurnitureFramework.Data.FPack.FPack;
 
@@ -175,6 +174,7 @@ namespace FurnitureFramework.FFHarmony.Patches
 #if IS_ANDROID
 					if (__instance.tabButtons == null) 
 						__instance.tabButtons = new List<ClickableTextureComponent>();
+
 					__instance.tabButtons.Add(new ClickableTextureComponent(
 						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f));
 					__instance.tabButtons.Add(new ClickableTextureComponent(
