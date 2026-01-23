@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
-using FurnitureFramework.Data.FPack;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -9,6 +8,9 @@ using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Objects;
+// ระบุ namespace ให้ชัดเจนเพื่อแก้ปัญหา FPack.FPack
+using FurnitureType = FurnitureFramework.Data.FType.FType;
+using FurniturePack = FurnitureFramework.Data.FPack.FPack;
 
 namespace FurnitureFramework.FFHarmony.Patches
 {
@@ -29,8 +31,8 @@ namespace FurnitureFramework.FFHarmony.Patches
 
 			try
 			{
-				// เรียก namespace เต็ม เพื่อความชัวร์
-				if (FPack.FPack.TryGetType(furniture, out Data.FType.FType? type))
+				// [FIX] ใช้ FurniturePack ที่ alias ไว้ด้านบนเพื่อเลี่ยงชื่อซ้ำ
+				if (FurniturePack.TryGetType(furniture, out FurnitureType? type))
 					type.GetSittingDepth(furniture, __instance, ref __result);
 			}
 			catch (Exception ex)
@@ -85,7 +87,7 @@ namespace FurnitureFramework.FFHarmony.Patches
 				new CodeInstruction(
 					OpCodes.Call,
 					AccessTools.DeclaredMethod(
-						typeof(Data.FType.FType),
+						typeof(FurnitureType),
 						"DrawLighting",
 						new Type[] {typeof(SpriteBatch) }
 					)
@@ -140,7 +142,7 @@ namespace FurnitureFramework.FFHarmony.Patches
 			List<CodeInstruction> to_write = new()
 			{
 				new(OpCodes.Call, AccessTools.Method(
-					typeof(Data.FType.FType),
+					typeof(FurnitureType),
 					"HasHeldObject"
 				))
 			};
@@ -165,19 +167,21 @@ namespace FurnitureFramework.FFHarmony.Patches
 		{
 			try
 			{
-				if (FPack.FPack.TryGetType(__instance, out Data.FType.FType? type))
+				if (FurniturePack.TryGetType(__instance, out FurnitureType? type))
 					type.setUpStoreForContext(__instance, ref ____isStorageShop);
+
 				if (__instance.ShopId == "leroymilo.FF.debug_catalog")
 				{
 #if IS_ANDROID
 					if (__instance.tabButtons == null) 
 						__instance.tabButtons = new List<ClickableTextureComponent>();
-					__instance.tabButtons.Add(new ClickableTextureComponent3(
+					__instance.tabButtons.Add(new ClickableTextureComponent(
 						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f));
-					__instance.tabButtons.Add(new ClickableTextureComponent3(
+					__instance.tabButtons.Add(new ClickableTextureComponent(
 						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(36, 20, 16, 16), 4f));
-					__instance.tabButtons.Add(new ClickableTextureComponent3(
+					__instance.tabButtons.Add(new ClickableTextureComponent(
 						new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(52, 20, 16, 16), 4f));
+					
 					__instance.repositionTabs();
 #else
 					__instance.UseFurnitureCatalogueTabs();
@@ -198,7 +202,7 @@ namespace FurnitureFramework.FFHarmony.Patches
 		{
 			try
 			{
-				if (FPack.FPack.TryGetType(__instance, out Data.FType.FType? type))
+				if (FurniturePack.TryGetType(__instance, out FurnitureType? type))
 					return type.highlightItemToSell(i);
 			}
 			catch (Exception ex)
