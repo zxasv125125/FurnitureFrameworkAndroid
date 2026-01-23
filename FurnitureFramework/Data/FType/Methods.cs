@@ -405,14 +405,75 @@ namespace FurnitureFramework.Data.FType
 
 		#region Storage
 
-		public void setUpStoreForContext(ShopMenu shop_menu, ref bool _isStorageShop)
+				public void setUpStoreForContext(ShopMenu shop_menu, ref bool _isStorageShop)
 		{
-			//shouldn't happen because shop_id must match FF/furniture_id to get here
 			if (SpecialType != SpecialType.FFStorage) return;
 			shop_menu.purchaseSound = null;
 			shop_menu.purchaseRepeatSound = null;
 			_isStorageShop = true;
 
+#if IS_ANDROID
+			shop_menu.tabButtons = new List<ClickableTextureComponent>();
+			ClickableTextureComponent clickableTextureComponent = new ClickableTextureComponent(
+				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(20, 20, 16, 16), 4f);
+			ClickableTextureComponent clickableTextureComponent2 = new ClickableTextureComponent(
+				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(36, 20, 16, 16), 4f);
+			ClickableTextureComponent clickableTextureComponent3 = new ClickableTextureComponent(
+				new Rectangle(0, 0, 64, 64), Game1.mouseCursors, new Rectangle(52, 20, 16, 16), 4f);
+
+			switch (StoragePreset)
+			{
+				case StoragePreset.Dresser:
+					shop_menu.ShopId = "Dresser";
+					shop_menu.tabButtons.Add(clickableTextureComponent);
+					shop_menu.setUpStoreForContext();
+					shop_menu.applyTab();
+					return;
+
+				case StoragePreset.Catalogue:
+					shop_menu.ShopId = "Catalogue";
+					shop_menu.tabButtons.Add(clickableTextureComponent2);
+					shop_menu.setUpStoreForContext();
+					shop_menu.applyTab();
+					return;
+
+				case StoragePreset.FurnitureCatalogue:
+					// Logic พิเศษสำหรับแยก Joja/Wizard บน Android
+					string currentItemName = this.Variants.Keys.FirstOrDefault() ?? "";
+					if (currentItemName.Contains("JojaFurnitureCatalogue") || 
+						currentItemName.Contains("WizardFurnitureCatalogue") || 
+						currentItemName.Contains("JunimoFurnitureCatalogue") || 
+						currentItemName.Contains("RetroFurnitureCatalogue") || 
+						currentItemName.Contains("TrashFurnitureCatalogue"))
+					{
+						shop_menu.ShopId = currentItemName;
+					}
+					else
+					{
+						shop_menu.ShopId = "Furniture Catalogue";
+					}
+					
+					shop_menu.tabButtons.Add(clickableTextureComponent3);
+					shop_menu.setUpStoreForContext();
+					shop_menu.applyTab();
+					return;
+			}
+
+			try 
+			{
+				foreach ((TabProperty tab_prop, int idx) in StorageTabs.Select((value, index) => (value, index)))
+				{
+					tab_prop.AddTab(shop_menu, ModID, idx);
+				}
+			}
+			catch (System.Exception ex)
+			{
+				ModEntry.Log($"[Error] Failed to create custom tabs in Methods.cs: {ex.Message}", StardewModdingAPI.LogLevel.Error);
+			}
+
+			shop_menu.repositionTabs();
+
+#else
 			shop_menu.tabButtons = new();
 			switch (StoragePreset)
 			{
@@ -429,7 +490,9 @@ namespace FurnitureFramework.Data.FType
 
 			foreach ((TabProperty tab_prop, int idx) in StorageTabs.Select((value, index) => (value, index)))
 				tab_prop.AddTab(shop_menu, ModID, idx);
+			
 			shop_menu.repositionTabs();
+#endif
 		}
 
 		public bool highlightItemToSell(Item item)
