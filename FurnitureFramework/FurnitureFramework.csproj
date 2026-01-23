@@ -1,29 +1,71 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<LangVersion>11</LangVersion>
-		<TargetFramework>net6.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<GamePath>$(SVPATH)</GamePath>
-		<GameModsPath>$(GamePath)/Mods (dev)</GameModsPath>
-		<EnableHarmony>true</EnableHarmony>
-		<VersionPrefix>3.2.0</VersionPrefix>
-	</PropertyGroup>
+    <PropertyGroup>
+        <LangVersion>11</LangVersion>
+        <TargetFramework>net8.0-android</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DefineConstants>$(DefineConstants);IS_ANDROID</DefineConstants>
+        <EnableHarmony>true</EnableHarmony>
+        <VersionPrefix>3.2.0</VersionPrefix>
+        
+        <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.1.1" />
-		<None Update="content.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        
+        <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.1.1" Condition="'$(GITHUB_ACTIONS)' != 'true'" />
+        
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="rm -rf '$(GameModsPath)/Example Pack'" />
-		<Exec Command="rm -rf '$(GameModsPath)/FF Templates'" />
-		<Exec Command="cp -r '../Example Pack' '$(GameModsPath)/Example Pack'" />
-		<Exec Command="cp -r '../doc/Templates' '$(GameModsPath)/FF Templates'" />
-	</Target>
+        <Reference Include="StardewValley">
+            <HintPath>libs/StardewValley.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        
+        <Reference Include="StardewModdingAPI">
+            <HintPath>libs/StardewModdingAPI.dll</HintPath>
+            <SpecificVersion>false</SpecificVersion>
+            <Private>false</Private>
+        </Reference>
+        
+        <Reference Include="StardewValley.GameData">
+            <HintPath>libs/StardewValley.GameData.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        
+        <Reference Include="0Harmony">
+            <HintPath>libs/0Harmony.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
+        <Reference Include="MonoGame.Framework">
+            <HintPath>libs/MonoGame.Framework.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
+        <Reference Include="xTile">
+            <HintPath>libs/xTile.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        
+        <Reference Include="SMAPI.Toolkit.CoreInterfaces">
+            <HintPath>libs/SMAPI.Toolkit.CoreInterfaces.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
+        <None Update="content.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="manifest.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(GITHUB_ACTIONS)' != 'true'">
+        <Exec Command="rm -rf '$(GameModsPath)/Example Pack'" />
+        <Exec Command="cp -r '../Example Pack' '$(GameModsPath)/Example Pack'" />
+    </Target>
 
 </Project>
